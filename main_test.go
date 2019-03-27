@@ -3,14 +3,15 @@ package main
 import (
 	"fmt"
 	"github.com/appleboy/gofight"
-	"github.com/spf13/viper"
+	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+	"time"
 )
 
 // Unit Tests
-func TestsShortenUrl(t *testing.T) {
+func TestShortenURL(t *testing.T) {
 	var err error
 
 	// Read configuration
@@ -30,10 +31,11 @@ func TestsShortenUrl(t *testing.T) {
 	postURL := "/urls"
 	getURL := fmt.Sprintf("/%s", goodCode)
 	getNotURL := "/z54321"
+	getStatsURL := fmt.Sprintf("/%s/stats", goodCode)
 
 	t.Log("Testing POST /urls")
 
-	t.Info("Should return bad request")
+	t.Log("Should return bad request")
 	r.POST(postURL).
 		SetDebug(true).
 		SetBody(string(badReq)).
@@ -41,7 +43,7 @@ func TestsShortenUrl(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 		})
 
-	t.Info("Should return ok")
+	t.Log("Should return ok")
 	r.POST(postURL).
 		SetDebug(true).
 		SetBody(string(good)).
@@ -51,34 +53,34 @@ func TestsShortenUrl(t *testing.T) {
 			value, _ := jsonparser.GetString(data, "code")
 			assert.Equal(t, "a12345", value)
 			// Now check http code
-			assert.Equal(t, http.StatusOk, res.Code)
+			assert.Equal(t, http.StatusOK, res.Code)
 		})
 
-	t.Info("Should return conflict. (repeating last api call)")
+	t.Log("Should return conflict. (repeating last api call)")
 	r.POST(postURL).
 		SetDebug(true).
 		SetBody(string(good)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
-			assert.Equal(t, http.Conflict, res.Code)
+			assert.Equal(t, http.StatusConflict, res.Code)
 		})
 
-	t.Info("Should return Unprocessable Entity")
+	t.Log("Should return Unprocessable Entity")
 	r.POST(postURL).
 		SetDebug(true).
 		SetBody(string(badCode)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
-			assert.Equal(t, http.UnprocessableEntity, res.Code)
+			assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 		})
 
 	t.Log("Testing GET /:code")
-	t.Info("Should return Found")
+	t.Log("Should return Found")
 	r.GET(getURL).
 		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusFound, res.Code)
 		})
 
-	t.Info("Should return NotFound")
+	t.Log("Should return NotFound")
 	r.GET(getNotURL).
 		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
@@ -86,7 +88,7 @@ func TestsShortenUrl(t *testing.T) {
 		})
 
 	t.Log("Testing GET /:code/stats")
-	r.GET(getStatsUrl).
+	r.GET(getStatsURL).
 		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			// Checking valid result content
@@ -96,20 +98,20 @@ func TestsShortenUrl(t *testing.T) {
 			log.Info("Checking that usage_count exists ")
 			assert.Nil(t, err)
 			log.Info("Checking usage_count value")
-			assert.Greater(t, count, 0)
+			assert.True(t, count > 0)
 			// Check created_at
 			log.Info("Checking that created_at exists ")
-			_, err := jsonparser.GetString(data, "created_at")
+			_, err = jsonparser.GetString(data, "created_at")
 			assert.Nil(t, err)
 			log.Info("Checking that created_at is in ISO8601 format ")
-			_, err := time.Parse(time.RFC3339Nano, "2013-06-05T14:10:43.678Z")
+			_, err = time.Parse(time.RFC3339Nano, "2013-06-05T14:10:43.678Z")
 			assert.Nil(t, err)
 			// Check last_usage
 			log.Info("Checking that last_usage exists ")
-			_, err := jsonparser.GetString(data, "created_at")
+			_, err = jsonparser.GetString(data, "created_at")
 			assert.Nil(t, err)
 			log.Info("Checking that last_usage is in ISO8601 format ")
-			_, err := time.Parse(time.RFC3339Nano, "2013-06-05T14:10:43.678Z")
+			_, err = time.Parse(time.RFC3339Nano, "2013-06-05T14:10:43.678Z")
 			assert.Nil(t, err)
 		})
 }
