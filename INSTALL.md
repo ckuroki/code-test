@@ -6,7 +6,7 @@ Compilation
 
 * `make` to compile (will download dependencies if required, using [Go modules](https://github.com/golang/go/wiki/Modules) )
 
-* `make test` to execute unit tests
+* `make test` to execute unit tests ( Please note that running tests require that service is down for avoid store locks )
 
 * `make build-image` to build a docker container ( requires [Docker](http://docker.io) )
 

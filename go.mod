@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/appleboy/gofight v2.0.0+incompatible
+	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23
 	github.com/gin-contrib/sse v0.0.0-20190301062529-5545eab6dad3 // indirect
 	github.com/gin-gonic/gin v1.3.0

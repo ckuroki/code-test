@@ -2,8 +2,8 @@ PRJ_DIR		?= $(shell pwd)
 
 all: shorten_url_api
 
-shorten_url_api: main.go
-	go build -o shorten_url_api main.go
+shorten_url_api: shorten_url_api.go store/store.go
+	go build shorten_url_api.go
 
 build-image: 
 	docker build -t  "shorten_url_api:latest"  .

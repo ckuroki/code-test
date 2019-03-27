@@ -4,48 +4,61 @@ import (
 	"fmt"
 	"github.com/appleboy/gofight"
 	"github.com/buger/jsonparser"
+	"github.com/ckuroki/code-test/store"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
 )
 
-// Unit Tests
-func TestShortenURL(t *testing.T) {
-	var err error
+var db *store.DB
+var r *gofight.RequestConfig
 
+// mock data
+const (
+	goodCode  = "a12345"
+	badCode   = "{\"url\":\"http://example.com\",\"code\":\"example\"}"
+	getNotURL = "/z54321"
+	postURL   = "/urls"
+	badReq    = "{\"whatever\":\"1234\"}"
+)
+
+func init() {
 	// Read configuration
-	err = readconfig()
+	err := readconfig()
 	if err != nil {
 		log.Error("configuration file error: \n")
 		return
 	}
 
-	r := gofight.New()
+	// Connection to the kv store
+	dbFile := viper.Get("db_file").(string)
+	db, err := store.Open(dbFile)
+	if err != nil {
+		log.Fatal("DB Open error: " + err.Error())
+	}
+	defer db.Close()
 
-	// mock data
-	goodCode := "12345"
-	badReq := "{\"whatever\":\"1234\"}"
-	good := fmt.Sprintf("{\"url\":\"http://example.com\",\"code\":\"%s\"}", goodCode)
-	badCode := "{\"url\":\"http://example.com\",\"code\":\"example\"}"
-	postURL := "/urls"
-	getURL := fmt.Sprintf("/%s", goodCode)
-	getNotURL := "/z54321"
-	getStatsURL := fmt.Sprintf("/%s/stats", goodCode)
+	// Delete mock code key
+	db.Delete(goodCode)
 
-	t.Log("Testing POST /urls")
+	r = gofight.New()
 
-	t.Log("Should return bad request")
+}
+
+func TestPostBadFormed(t *testing.T) {
+
 	r.POST(postURL).
-		SetDebug(true).
 		SetBody(string(badReq)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 		})
+}
 
-	t.Log("Should return ok")
+func TestPost(t *testing.T) {
+	good := fmt.Sprintf("{\"url\":\"http://example.com\",\"code\":\"%s\"}", goodCode)
 	r.POST(postURL).
-		SetDebug(true).
 		SetBody(string(good)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			// Checking valid result content
@@ -55,41 +68,43 @@ func TestShortenURL(t *testing.T) {
 			// Now check http code
 			assert.Equal(t, http.StatusOK, res.Code)
 		})
+}
 
-	t.Log("Should return conflict. (repeating last api call)")
+func TestPostConflict(t *testing.T) {
+	good := fmt.Sprintf("{\"url\":\"http://example.com\",\"code\":\"%s\"}", goodCode)
 	r.POST(postURL).
-		SetDebug(true).
 		SetBody(string(good)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusConflict, res.Code)
 		})
+}
 
-	t.Log("Should return Unprocessable Entity")
+func TestPostBadCode(t *testing.T) {
 	r.POST(postURL).
-		SetDebug(true).
 		SetBody(string(badCode)).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusUnprocessableEntity, res.Code)
 		})
+}
 
-	t.Log("Testing GET /:code")
-	t.Log("Should return Found")
+func TestGetCode(t *testing.T) {
+	getURL := fmt.Sprintf("/%s", goodCode)
 	r.GET(getURL).
-		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusFound, res.Code)
 		})
+}
 
-	t.Log("Should return NotFound")
+func TestGetNotFound(t *testing.T) {
 	r.GET(getNotURL).
-		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			assert.Equal(t, http.StatusNotFound, res.Code)
 		})
+}
 
-	t.Log("Testing GET /:code/stats")
+func TestGetStats(t *testing.T) {
+	getStatsURL := fmt.Sprintf("/%s/stats", goodCode)
 	r.GET(getStatsURL).
-		SetDebug(true).
 		Run(restEngine(), func(res gofight.HTTPResponse, req gofight.HTTPRequest) {
 			// Checking valid result content
 			data := []byte(res.Body.String())

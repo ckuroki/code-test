@@ -1,3 +1,2 @@
 port: ":8080" # Service Port
-dbfile: "shorten_url.db" # db file name
-bucket: "shorten_url" # key value bucket name
+db_file: "shorten_url.db" # db file name
